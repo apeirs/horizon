@@ -104,6 +104,20 @@ impl ItemEnvironmentTick {
     }
 }
 impl ItemEntity {
+    /// `ItemEntity.setFluidMovement`: `multiplier` across, and a float
+    /// 5.0E-4 up while rising slower than 0.06F.
+    fn set_fluid_movement(&mut self, multiplier: f64) {
+        let rise = if self.velocity.y < f64::from(0.06_f32) {
+            f64::from(5.0e-4_f32)
+        } else {
+            0.0
+        };
+        self.velocity = Vec3::new(
+            self.velocity.x * multiplier,
+            self.velocity.y + rise,
+            self.velocity.z * multiplier,
+        );
+    }
     pub const WIDTH: f64 = 0.25;
     pub fn bounds(&self) -> Aabb {
         let h = Self::WIDTH / 2.0;
@@ -218,18 +232,11 @@ impl ItemEntity {
         let old_velocity = self.velocity;
         let in_water = water_height > f64::from(0.1f32);
         if in_water {
-            // ItemEntity.setUnderwaterMovement
-            self.velocity = Vec3::new(
-                self.velocity.x * 0.99,
-                self.velocity.y + if self.velocity.y < 0.06 { 5.0e-4 } else { 0.0 },
-                self.velocity.z * 0.99,
-            );
+            // ItemEntity.setUnderwaterMovement: setFluidMovement(0.99F).
+            self.set_fluid_movement(f64::from(0.99_f32));
         } else if lava_height > f64::from(0.1f32) {
-            self.velocity = Vec3::new(
-                self.velocity.x * 0.95,
-                self.velocity.y + if self.velocity.y < 0.06 { 5.0e-4 } else { 0.0 },
-                self.velocity.z * 0.95,
-            );
+            // setUnderLavaMovement: setFluidMovement(0.95F).
+            self.set_fluid_movement(f64::from(0.95_f32));
         } else {
             if !self.no_gravity {
                 self.velocity.y -= 0.04;
@@ -305,19 +312,22 @@ impl ItemEntity {
                 self.bounds(),
                 &mut self.velocity,
             );
-            let mut friction = 0.98;
+            // getAirDrag() (0.98F), times the block's friction on the
+            // ground, both floats until the multiply.
+            let drag = 0.98_f32;
+            let mut friction = drag;
             if self.on_ground {
                 let below = world.block(
                     self.position.x.floor() as i32,
                     (self.position.y - 0.999_999).floor() as i32,
                     self.position.z.floor() as i32,
                 );
-                friction = f64::from(facts.get(below).friction) * 0.98;
+                friction = drag * facts.get(below).friction;
             }
             self.velocity = Vec3::new(
-                self.velocity.x * friction,
-                self.velocity.y * 0.98,
-                self.velocity.z * friction,
+                self.velocity.x * f64::from(friction),
+                self.velocity.y * f64::from(drag),
+                self.velocity.z * f64::from(friction),
             );
             if self.on_ground && self.velocity.y < 0.0 {
                 self.velocity.y *= -0.5;
@@ -776,10 +786,12 @@ impl ExperienceOrb {
         // inside blocks takes no gravity until it is pushed out below.
         let colliding = !crate::collisions::no_collision_empty(&mut scene, bounds);
         if facts.get(block).fluid == Fluid::Water {
+            // setUnderwaterMovement: 0.99F, and 5.0E-4F up to at most 0.06F.
+            let drag = f64::from(0.99_f32);
             self.velocity = Vec3::new(
-                self.velocity.x * 0.99,
-                (self.velocity.y + 5.0e-4).min(0.06),
-                self.velocity.z * 0.99,
+                self.velocity.x * drag,
+                (self.velocity.y + f64::from(5.0e-4_f32)).min(f64::from(0.06_f32)),
+                self.velocity.z * drag,
             );
         } else if !colliding && !self.no_gravity {
             self.velocity.y -= 0.03;

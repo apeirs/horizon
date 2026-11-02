@@ -5538,10 +5538,12 @@ impl Game<'_> {
                 f.position.z.floor() as i32,
             ]));
         }
+        // scale(getAirDrag()): 0.98F, widened.
+        let drag = f64::from(0.98_f32);
         f.velocity = Vec3::new(
-            f.velocity.x * 0.98,
-            f.velocity.y * 0.98,
-            f.velocity.z * 0.98,
+            f.velocity.x * drag,
+            f.velocity.y * drag,
+            f.velocity.z * drag,
         );
         Ok(if teleported.is_some() {
             FallStep::Gone

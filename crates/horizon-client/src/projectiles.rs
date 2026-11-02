@@ -767,13 +767,14 @@ impl Projectile {
     /// AbstractHurtingProjectile.applyInertia, on both server and client.
     pub fn apply_hurting_inertia(&mut self, water: bool) {
         // WitherSkull.getInertia: 0.73 for dangerous skulls.
-        let inertia = match self.kind {
-            ProjectileKind::WitherSkull { dangerous: true } => 0.73,
+        // getInertia and getLiquidInertia are floats (0.95F, 0.8F), widened.
+        let inertia = f64::from(match self.kind {
+            ProjectileKind::WitherSkull { dangerous: true } => 0.73_f32,
             // AbstractWindCharge.getInertia and getLiquidInertia.
             ProjectileKind::WindCharge | ProjectileKind::BreezeWindCharge => 1.0,
             _ if water => 0.8,
             _ => 0.95,
-        };
+        });
         let v = self.velocity;
         let len = (v.x * v.x + v.y * v.y + v.z * v.z).sqrt().max(1.0e-9);
         self.velocity = Vec3::new(
@@ -839,9 +840,10 @@ impl Projectile {
                 }
             }
             _ => {
-                // ThrowableProjectile: gravity, then inertia.
+                // ThrowableProjectile: gravity, then inertia (applyInertia:
+                // 0.8F in water, else getAirDrag() 0.99F, widened).
                 self.velocity.y -= self.gravity();
-                let inertia = if water { 0.8 } else { 0.99 };
+                let inertia = f64::from(if water { 0.8_f32 } else { 0.99_f32 });
                 self.velocity = Vec3::new(
                     self.velocity.x * inertia,
                     self.velocity.y * inertia,
@@ -907,10 +909,12 @@ impl Projectile {
                 return (false, Hit::None);
             }
             self.position = to;
+            // LlamaSpit: scale(getAirDrag()) (0.99F), then gravity.
+            let drag = f64::from(0.99_f32);
             self.velocity = Vec3::new(
-                self.velocity.x * 0.99,
-                self.velocity.y * 0.99 - self.gravity(),
-                self.velocity.z * 0.99,
+                self.velocity.x * drag,
+                self.velocity.y * drag - self.gravity(),
+                self.velocity.z * drag,
             );
             self.update_rotation();
             return (self.position.y > -128.0 && self.age < 6000, Hit::None);

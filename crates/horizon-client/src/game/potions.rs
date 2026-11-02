@@ -1396,7 +1396,8 @@ impl Game<'_> {
             ))
             .fluid
             == horizon_client::blocks::Fluid::Water;
-        let inertia = if water { 0.8 } else { 0.99 };
+        // ThrowableProjectile.applyInertia: 0.8F in water, else 0.99F, widened.
+        let inertia = f64::from(if water { 0.8_f32 } else { 0.99_f32 });
         t.velocity = Vec3::new(
             t.velocity.x * inertia,
             (t.velocity.y - gravity) * inertia,

@@ -1366,6 +1366,38 @@ def tnt_minecart_rails():
     ]
 
 
+def entity_drag():
+    """The air drags and fluid slowdowns of non-living entities are floats widened to double: getAirDrag()
+    (0.98F for primed TNT, falling blocks and items, 0.99F for thrown items), an item's friction times it
+    on the ground, setFluidMovement's 0.99F below 0.06F with 5.0E-4F (an item in flowing water), an orb's
+    0.99F in still water, and a fireball's 0.95F inertia. Positions and motions are compared to the last bit."""
+    def probe(tag):
+        return [cmd(f'/data get entity @e[tag={tag},limit=1] Pos'), cmd(f'/data get entity @e[tag={tag},limit=1] Motion')]
+    tags = ['d_tnt', 'd_sand', 'd_item', 'd_ice', 'd_wet', 'd_snow', 'd_fire', 'd_orb']
+    out = [
+        *setup('/fill 0 204 0 15 204 15 minecraft:stone', '/fill 0 204 12 15 204 15 minecraft:ice',
+               '/setblock 13 205 3 minecraft:water', '/fill 12 204 7 14 206 9 minecraft:glass',
+               '/setblock 13 205 8 minecraft:water', '/setblock 13 206 8 minecraft:air'),
+        cmd('/summon minecraft:tnt 1.5 210 1.5 {fuse:400s,Motion:[0.1d,0.2d,0.05d],Tags:["d_tnt"]}'),
+        cmd('/summon minecraft:falling_block 3.5 212 1.5 {BlockState:{Name:"minecraft:sand"},Time:1,'
+            'Motion:[0.05d,0.1d,0.0d],Tags:["d_sand"]}'),
+        cmd('/summon minecraft:item 5.5 207 1.5 {Item:{id:"minecraft:stone",count:1},PickupDelay:32767s,'
+            'Motion:[0.2d,0.3d,0.1d],Tags:["d_item"]}'),
+        cmd('/summon minecraft:item 2.5 205 13.5 {Item:{id:"minecraft:stone",count:1},PickupDelay:32767s,'
+            'Motion:[0.3d,0.0d,0.0d],Tags:["d_ice"]}'),
+        cmd('/summon minecraft:item 13.5 205.2 3.5 {Item:{id:"minecraft:stone",count:1},PickupDelay:32767s,'
+            'Motion:[0.0d,-0.1d,0.05d],Tags:["d_wet"]}'),
+        cmd('/summon minecraft:snowball 7.5 214 1.5 {Motion:[0.3d,0.3d,0.2d],Tags:["d_snow"]}'),
+        cmd('/summon minecraft:fireball 1.5 214 6.5 {Motion:[0.2d,0.0d,0.1d],acceleration_power:0.05d,Tags:["d_fire"]}'),
+        cmd('/summon minecraft:experience_orb 13.5 205.2 8.5 {Value:1s,Motion:[0.01d,-0.05d,0.0d],Tags:["d_orb"]}'),
+        {'op': 'tick', 'n': 9},
+    ]
+    for tag in tags:
+        out += probe(tag)
+    out += [*setup('/kill @e[type=!player]', '/fill 0 204 0 15 215 15 minecraft:air'), {'op': 'tick', 'n': 5}]
+    return out
+
+
 def ender_dragon():
     """`/kill` on the fight's dragon ends the fight (#3319): `EnderDragon.kill` removes it and calls
     `EnderDragonFight.setDragonKilled`, so no new dragon takes its place, the exit portal opens and the
@@ -1606,6 +1638,7 @@ def groups():
         ('wither breaks', wither_breaks()),
         ('tnt minecart rails', tnt_minecart_rails()),
         ('creative shulker drops', creative_shulker_drops()),
+        ('entity drag', entity_drag()),
         ('ender dragon', ender_dragon()),
         ('place structure', place_structure()),
         ('tame wolf kills', tame_wolf_kills()),

@@ -86,10 +86,12 @@ impl PrimedTnt {
             &mut self.velocity,
             |pos| tops.push(pos),
         );
+        // scale(getAirDrag()): 0.98F, widened.
+        let drag = f64::from(0.98_f32);
         self.velocity = Vec3::new(
-            self.velocity.x * 0.98,
-            self.velocity.y * 0.98,
-            self.velocity.z * 0.98,
+            self.velocity.x * drag,
+            self.velocity.y * drag,
+            self.velocity.z * drag,
         );
         if self.on_ground {
             self.velocity = Vec3::new(
